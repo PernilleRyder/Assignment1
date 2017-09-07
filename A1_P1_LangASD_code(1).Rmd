@@ -38,7 +38,7 @@ N.B. Create a GitHub repository for the Language Development in ASD set of assig
 Set the working directory (the directory with your data and code for these assignments):
 
 ```{r}
-
+setwd("~/Desktop/Assignment1")
 ```
 
 Load the three data sets, after downloading them from dropbox and saving them in your working directory:
@@ -47,7 +47,10 @@ Load the three data sets, after downloading them from dropbox and saving them in
 * Word data: https://www.dropbox.com/s/8ng1civpl2aux58/token_train.csv?dl=0
 
 ```{r}
-
+library(readr)
+lu_data = read_csv("~/Desktop/Assignment1/LU_train.csv")
+demo_data = read_csv("~/Desktop/Assignment1/demo_train(1).csv")
+token_data = read_csv("~/Desktop/Assignment1/token_train.csv")
 ```
 
 Explore the 3 datasets (e.g. visualize them, summarize them, etc.). You will see that the data is messy, since the psychologists collected the demographic data, a linguist analyzed the length of utterance in May 2014 and the same linguist analyzed the words several months later. In particular:
@@ -64,15 +67,26 @@ Tip: Look into the package data.table, or google "how to rename variables in R"
 
 
 ```{r}
-
+library(plyr)
+lu_data=rename(lu_data,c("SUBJ"="CHILD"))
+demo_data=rename(demo_data,c("Child.ID"="CHILD"))
+demo_data=rename(demo_data,c("Visit"="VISIT"))
+token_data=rename(token_data,c("SUBJ"="CHILD"))
 ```
 
 2b. Find a way to homogeneize the way "visit" is reported. If you look into the original data sets, you will see that in the LU data and the Token data, Visits are called "visit 1" in stead of just 1 (which is the case in the demographic data set).
 Tip: There is a package called stringr, which will be very handy for you also in future assignments. We will return to this package later, but for now use the str_extract () to extract only the number from the variable Visit in each data set. Tip: type ?str_extract() after loading the library, for examples of how to use it.
 
 ```{r}
+library("stringr")
 
+?str_extract()
 
+lu_data$VISIT = str_extract(lu_data$VISIT, "\\d")
+token_data$VISIT = str_extract(token_data$VISIT, "\\d")
+
+#Deleting first row in the dataset
+lu_data= lu_data[-1, ]
 ```
 
 2c. We also need to make a small adjustment to the content of the Child.ID coloumn in the demographic data. Within this column, names that are not abbreviations do not end with "." (i.e. Adam), which is the case in the other two data sets (i.e. Adam.). If The content of the two variables isn't identical the data sets will not be merged sufficiently.
@@ -87,7 +101,9 @@ Tip: You will have to do identical work for both data sets, so to save time on t
 
 
 ```{r}
-
+lu_data$CHILD = gsub("\\.", "", lu_data$CHILD)
+token_data$CHILD = gsub("\\.", "", token_data$CHILD)
+demo_data$CHILD = gsub("\\.", "", demo_data$CHILD)
 ```
 
 2d. Now that the nitty gritty details of the different data sets are fixed, we want to make a subset of each data set only containig the variables that we wish to use in the final data set.
@@ -105,8 +121,14 @@ The variables we need are: Child.ID, Visit, Ethnicity, Diagnosis, Gender, Age, A
 It would be smart to rename the MullenRaw and ExpressiveLangRaw into something you can remember (i.e. nonVerbalIQ, verbalIQ)
 
 ```{r}
+library("tidyverse")
 
+lu_sub = select(lu_data, CHILD, VISIT, MOT_MLU, MOT_LUstd, CHI_MLU, CHI_LUstd)
+demo_sub = select(demo_data, CHILD, VISIT, Ethnicity, Diagnosis,Gender, Age, ADOS, MullenRaw, ExpressiveLangRaw)
+token_sub = select(token_data, CHILD, VISIT, types_MOT, types_CHI, tokens_MOT, tokens_CHI)
 
+demo_sub=plyr::rename(demo_sub,c("ExpressiveLangRaw"="verbalIQ"))
+demo_sub=plyr::rename(demo_sub,c("MullenRaw"="nonVerbalIQ"))
 ```
 
 2e. Finally we are ready to merge all the data sets into just one. 
@@ -116,7 +138,8 @@ Tip: Merge only works for two data frames at the time.
 Tip: Check the number of observations in the datasets before and after merging. What is going on?
 
 ```{r}
-
+data1=merge(demo_sub, lu_sub)
+data=merge(data1, token_sub)
 ```
 
 Are we done yet?
@@ -130,6 +153,14 @@ Tip: the final dataset should have as many rows as the the old one.
 
 
 ```{r}
+subset_data = subset(data, VISIT == "1")
+
+subset_data2 = select(subset_data, CHILD, ADOS, nonVerbalIQ, verbalIQ)
+
+
+data=data[,-7:-9]
+
+final_data1=merge(data, subset_data2)
 
 ```
 
@@ -145,7 +176,17 @@ Tip: Google "how to rename levels in R".
 
 ```{r}
 
+final_data1$CHILD = as.factor(final_data1$CHILD)
+final_data1$CHILD = as.numeric(final_data1$CHILD)
 
+final_data1$VISIT = as.numeric(final_data1$VISIT)
+
+final_data1$Gender = as.factor(final_data1$Gender)
+final_data1$Diagnosis = as.factor(final_data1$Diagnosis)
+
+library(plyr)
+final_data1$Diagnosis=revalue(final_data1$Diagnosis, c("A" = "ASD", "B"="TD"))
+final_data1$Gender=revalue(final_data1$Gender, c("1" = "M", "2"="F"))
 ```
 
 
