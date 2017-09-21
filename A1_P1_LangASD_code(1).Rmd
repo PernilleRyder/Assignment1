@@ -1,6 +1,6 @@
 ---
 title: "A1_P1_Student"
-author: "Céline Carlsen"
+author: "Céline Carlsen + Pernille Nikolajsen"
 date: "29/8/2017"
 output: html_document
 ---
@@ -38,7 +38,7 @@ N.B. Create a GitHub repository for the Language Development in ASD set of assig
 Set the working directory (the directory with your data and code for these assignments):
 
 ```{r}
-setwd("~/Desktop/Assignment1")
+setwd("~/Desktop/Experimental methods 3/Assignment1")
 ```
 
 Load the three data sets, after downloading them from dropbox and saving them in your working directory:
@@ -48,9 +48,9 @@ Load the three data sets, after downloading them from dropbox and saving them in
 
 ```{r}
 library(readr)
-lu_data = read_csv("~/Desktop/Assignment1/LU_train.csv")
-demo_data = read_csv("~/Desktop/Assignment1/demo_train(1).csv")
-token_data = read_csv("~/Desktop/Assignment1/token_train.csv")
+lu_data = read_csv("~/Desktop/Experimental methods 3/Assignment1/LU_train.csv")
+demo_data = read_csv("~/Desktop/Experimental methods 3/Assignment1/demo_train(1).csv")
+token_data = read_csv("~/Desktop/Experimental methods 3/Assignment1/token_train.csv")
 ```
 
 Explore the 3 datasets (e.g. visualize them, summarize them, etc.). You will see that the data is messy, since the psychologists collected the demographic data, a linguist analyzed the length of utterance in May 2014 and the same linguist analyzed the words several months later. In particular:
@@ -193,7 +193,7 @@ final_data1$Gender=revalue(final_data1$Gender, c("1" = "M", "2"="F"))
 Save the data set using into a csv file. Hint: look into write.csv()
 
 ```{r}
-
+write.csv(final_data1, file = "Assignment1.csv")
 ```
 
 
@@ -210,6 +210,21 @@ List all kids who:
 
 ```{r}
 
+filter1=filter(final_data1, CHI_MLU>2.7)
+filter2=filter(final_data1, CHI_MLU<1.5, VISIT==1)
+
+#pipes = then
+
+filter3=final_data1 %>% CHILD %>% #? 
+  
+  data %>%
+  group by (CHILD) %>%
+  tally()%>%
+  filter (n<6)
+
+#Children you didn't complete all trials has less than 6 visits
+  
+  tally() # wraps the number of rows
 
 ```
 
@@ -221,6 +236,9 @@ USING ARRANGE
 
 ```{r}
 
+arrange_data1=arrange(final_data1, desc(VISIT), (CHI_MLU))
+
+arrange_data2 = arrange(final_data1, VISIT, desc(CHI_MLU))
 
 ```
 
@@ -230,6 +248,10 @@ USING SELECT
 2. What happens if you include the name of a variable multiple times in a select() call?
 
 ```{r}
+select =select(final_data1, Diagnosis=="ASD") #doesn't work
+select_data=select(final_data1, CHI_MLU, tokens_CHI)
+select_data=merge(subset_asd, select_data)
+
 
 ```
 
@@ -240,6 +262,15 @@ USING MUTATE, SUMMARISE and PIPES
 3. The solution to task above enables us to assess the average amount of words produced by each child. Why don't we just use these average values to describe the language production of the children? What is the advantage of keeping all the data?
 
 ```{r}
+final_data1$CHI_MLU = as.numeric(final_data1$CHI_MLU)
+final_data1 = mutate(final_data1, meanMLU=CHI_MLU/352)
 
+tokens_CHI
+summarise_data= final_data1 %>% group_by(CHILD)
+summarise_data %>% summarise(meanTokensChi = mean(tokens_CHI, na.rm = TRUE))
+
+?summarise #Summarise works in an analogous way to mutate, except instead of adding columns to an existing data frame, it creates a new data frame
+
+#The advanatge of keeping all data is that we can see at which visit the child produced most words and if the amount of words either increased or decreased as a function of visit. 
 
 ```
