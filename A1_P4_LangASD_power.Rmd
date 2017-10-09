@@ -28,6 +28,7 @@ library(simr)
 
 data = read_csv("~/Desktop/Experimental methods 3/Assignment 1- part 4/Assignment1.csv")
 
+
 fav_model = lmer(CHI_MLU ~ 1 + VISIT + MOT_MLU + verbalIQ + (1+VISIT|CHILD), data = data, REML = FALSE)
 
 #nsim= possible samples
@@ -72,10 +73,16 @@ summary(fav_model)
 
 fixef(fav_model)["VISIT"] <- 0.1
 fixef(fav_model)["MOT_MLU"] <- 0.3
-fixef(fav_model)
-powerCurveV = powerCurve(fav_model,
-fixed("VISIT"),along="CHILD", nsim=10)
-Problem?
+fixef(fav_model)["verbalIQ"]<- 0.05
+
+powerCurveV = powerCurve(fav_model, fixed("VISIT"),along="CHILD", nsim=10)
+powerCurveM = powerCurve(fav_model, fixed("MOT_MLU"),along="CHILD", nsim=10)
+powerCurveI = powerCurve(fav_model, fixed("verbalIQ"),along="CHILD", nsim=10)
+
+powerCurveV
+powerCurveM
+powerCurveI
+
 
 createNewData <- function (participants(),visit(6),fav_model){
   # participants is the number of subjects
@@ -124,13 +131,48 @@ createNewData <- function (participants(),visit(6),fav_model){
   return(d)
 }
 ```
+[Report the power analysis and comment on what you can (or cannot) use its estimates for.
 
+Create a table.
+Visit: 29 participants is needed for reaching the power threshold of 80%.(90% = 55.50, 99.75 - 168 rows)
+MOT_MLU: 9 participants  is needed for reaching the power threshold of 80% (90% = 55.50, 99.75 - 50 rows)
+verbalIQ: 22 participants is needed for reaching the power threshold of 80% (100% = 69.15, 100,0 - 127 rows)
+The powercurve is created on 10 simulations which makes it unreliable as more simulations are preferred. Therefore, the powercurve would be more reliable if it had been run on 200 simulations, which also would influence the confidence intervals and decrease the distance between them and thus making the calculations more precise. If more simulations had been run and the power threshold was not reached, a solution would have been to simulate more participants to find the needed number for reaching it.]
 
 ### Exercise 3
 
 Assume you have only the resources to collect 30 kids (15 with ASD and 15 TDs). Identify the power for each relevant effect and discuss whether it's worth to run the study and why.
 
+```{r}
 
+ASD_data = subset(data, Diagnosis=="ASD")
+TD_data = subset(data, Diagnosis=="TD")
 
+ASD = subset(ASD_data[1:86,])
+TD = subset(TD_data[1:88,])
 
+new_data = rbind(ASD, TD)
+
+new_model = lmer(CHI_MLU ~ 1 + VISIT + MOT_MLU + verbalIQ + (1+VISIT|CHILD), data = new_data, REML = FALSE)
+summary(new_model)
+
+fixef(new_model)["VISIT"] <- 0.1
+fixef(new_model)["MOT_MLU"] <- 0.3
+fixef(new_model)["verbalIQ"]<- 0.05
+
+new_powerCurveV = powerCurve(new_model, fixed("VISIT"),along="CHILD", nsim=10)
+new_powerCurveM = powerCurve(new_model, fixed("MOT_MLU"),along="CHILD", nsim=10)
+new_powerCurveI = powerCurve(new_model, fixed("verbalIQ"),along="CHILD", nsim=10)
+
+new_powerCurveV
+new_powerCurveM
+new_powerCurveI
+
+```
+
+[ Visit: more than 30 participants is needed for reaching the power threshold of 80%.
+MOT_MLU: 15 participants is needed for reaching the power threshold of 80%.(80% = 44.39, 97.48  - 86 rows)
+verbalIQ: 18 participants is needed for reaching the power threshold of 80%.(90% = 55.50, 99.75 - 103 rows)
+
+Visit does not reach the requirements of the threshold. Therefore more than 30 participant is needed for this model to be powerful enough for research and publication.]
 
