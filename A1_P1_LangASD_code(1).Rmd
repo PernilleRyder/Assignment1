@@ -123,10 +123,12 @@ It would be smart to rename the MullenRaw and ExpressiveLangRaw into something y
 ```{r}
 library("tidyverse")
 
+#Selecting what columns to use
 lu_sub = select(lu_data, CHILD, VISIT, MOT_MLU, MOT_LUstd, CHI_MLU, CHI_LUstd)
 demo_sub = select(demo_data, CHILD, VISIT, Ethnicity, Diagnosis,Gender, Age, ADOS, MullenRaw, ExpressiveLangRaw)
 token_sub = select(token_data, CHILD, VISIT, types_MOT, types_CHI, tokens_MOT, tokens_CHI)
 
+#renaming columns
 demo_sub=plyr::rename(demo_sub,c("ExpressiveLangRaw"="verbalIQ"))
 demo_sub=plyr::rename(demo_sub,c("MullenRaw"="nonVerbalIQ"))
 ```
@@ -213,18 +215,8 @@ List all kids who:
 filter1=filter(final_data1, CHI_MLU>2.7)
 filter2=filter(final_data1, CHI_MLU<1.5, VISIT==1)
 
-#pipes = then
-
-filter3=final_data1 %>% CHILD %>% #? 
-  
-  data %>%
-  group by (CHILD) %>%
-  tally()%>%
-  filter (n<6)
-
-#Children you didn't complete all trials has less than 6 visits
-  
-  tally() # wraps the number of rows
+missed = final_data1%>%group_by(CHILD)%>%tally() # tally() wraps the number of rows #pipes = then
+filter(missed, n<6) #Children who didn't complete all trials has less than 6 visits
 
 ```
 
@@ -248,10 +240,13 @@ USING SELECT
 2. What happens if you include the name of a variable multiple times in a select() call?
 
 ```{r}
-select =select(final_data1, Diagnosis=="ASD") #doesn't work
-select_data=select(final_data1, CHI_MLU, tokens_CHI)
-select_data=merge(subset_asd, select_data)
 
+select_asd= select(final_data1, Diagnosis)
+select_data = select(final_data1, CHI_MLU, tokens_CHI)
+select_data = merge(select_asd, select_data)
+select_data = subset(select_data, Diagnosis == "ASD")
+
+#It doesn't matter how many times you write the name of a variable, it will only be included one time. 
 
 ```
 
@@ -265,9 +260,12 @@ USING MUTATE, SUMMARISE and PIPES
 final_data1$CHI_MLU = as.numeric(final_data1$CHI_MLU)
 final_data1 = mutate(final_data1, meanMLU=CHI_MLU/352)
 
-tokens_CHI
-summarise_data= final_data1 %>% group_by(CHILD)
+summarise_data = final_data1 %>% group_by(CHILD)
 summarise_data %>% summarise(meanTokensChi = mean(tokens_CHI, na.rm = TRUE))
+
+S_data = group_by(final_data1, CHILD)
+data2 = summarise(S_data, meanTokensChi = mean(tokens_CHI))
+final_data1 = merge(final_data1, data2)
 
 ?summarise #Summarise works in an analogous way to mutate, except instead of adding columns to an existing data frame, it creates a new data frame
 
