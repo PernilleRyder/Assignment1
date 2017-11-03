@@ -1,6 +1,6 @@
 ---
 title: "A1_P1_Student"
-author: "Céline Carlsen + Pernille Nikolajsen"
+author: "Pernille Nikolajsen"
 date: "29/8/2017"
 output: html_document
 ---
