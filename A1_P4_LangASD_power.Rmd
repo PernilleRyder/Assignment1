@@ -1,0 +1,178 @@
+---
+title: "Assignment 1 - Language Development in ASD - part 4"
+author: "Riccardo Fusaroli"
+date: "August 10, 2017"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Welcome to the fourth exciting part of the Language Development in ASD exercise
+
+In this exercise we will assess how many participants we would need to adequately replicate our findings (ensuring our sample size is adequate, our alpha at 0.05 and our beta at 0.8).
+
+### Exercise 1
+
+How much power does your study have (if your model estimates are quite right)?
+- [GitHub]Load your dataset, fit your favorite model, assess power for your main effects and interactions of interest.
+- Report the power analysis and comment on what you can (or cannot) use its estimates for.
+
+```{r}
+
+setwd("~/Desktop/Experimental methods 3/Assignment 1- part 4")
+
+library(lmerTest)
+library(simr)
+
+data = read_csv("~/Desktop/Experimental methods 3/Assignment 1- part 4/Assignment1.csv")
+
+
+fav_model = lmer(CHI_MLU ~ 1 + VISIT + MOT_MLU + verbalIQ + (1+VISIT|CHILD), data = data, REML = FALSE)
+
+#nsim= possible samples
+as_power = lmer(CHI_MLU ~ 1 + VISIT + MOT_MLU + verbalIQ + (1+VISIT|CHILD), data=data, REML = FALSE)
+summary(as_power)
+powerV = powerSim(as_power,fixed("VISIT"),nsim=200)
+powerV
+
+powerM = powerSim(as_power,fixed("MOT_MLU"),nsim=200)
+powerM
+
+powerI = powerSim(as_power,fixed("verbalIQ"),nsim=200)
+powerI
+
+```
+[Report the power analysis and comment on what you can (or cannot) use its estimates for
+
+powerV = 100% (98.17 = 100)
+powerM = 100% (98.17 = 100)
+powerI = 100% (98.17 = 100)
+--> create a table
+
+I used the estimated effect size to calculate the power of the variables: visit, mot_mlu and verbalIQ = 100%(98.17=100). Given the 80% threshold, the power calculated indicates that the variables have enough power to be used in this study. However these variables are only reliable to be used if they have enough power before conducting the experiment.]
+
+### Exercise 2
+
+How would you perform a more conservative power analysis?
+- Identify and justify a minimum effect size for each of your relevant effects
+- [GitHub] take the model from exercise 1 and replace the effects with the minimum effect size that you'd accept.
+- [GitHub] assess the power curve by Child.ID, identifying an ideal number of participants to estimate each effect
+- OPTIONAL if your power estimates do not reach an acceptable threshold simulate additional participants and repeat the previous analysis
+- Report the power analysis and comment on what you can (or cannot) use its estimates for.
+
+```{r}
+
+
+### Riccardo's clumsy function to simulate new participants
+### TO DO points are only notes for myself, so not part of the assignment
+
+summary(fav_model)
+#estimates = fixed effects
+
+fixef(fav_model)["VISIT"] <- 0.1
+fixef(fav_model)["MOT_MLU"] <- 0.3
+fixef(fav_model)["verbalIQ"]<- 0.05
+
+powerCurveV = powerCurve(fav_model, fixed("VISIT"),along="CHILD", nsim=10)
+powerCurveM = powerCurve(fav_model, fixed("MOT_MLU"),along="CHILD", nsim=10)
+powerCurveI = powerCurve(fav_model, fixed("verbalIQ"),along="CHILD", nsim=10)
+
+powerCurveV
+powerCurveM
+powerCurveI
+
+
+createNewData <- function (participants(),visit(6),fav_model){
+  # participants is the number of subjects
+  # visits is the number of visits
+  # TO DO: LOOP THROUGH ALL FE ROWS AND AUTOMATICALLY EXTRACT NAMES OF FIXED EFFECTS AND ESTIMATES
+  fe <- fixef(fav_model)
+  Intercept <- fe[1] #intercept
+  bVisit <- fe[2] #visit
+  bDiagnosis <- fe[3] #diagnosis
+  bVisitDiagnosis <- fe[4] #visit diagnosis interaction
+  # TO DO: INTEGRATE STANDARD ERROR?
+  
+  # TO DO: LOOP THROUGH ALL VC COMPONENTS AND AUTOMATICALLY EXTRACT NAMES OF EFFECTS AND ESTIMATES
+  vc<-VarCorr(model) # variance component
+  sigmaSubject <- as.numeric(attr(vc[[1]],"stddev")[1]) # random intercept by subject
+  sigmaVisit <- as.numeric(attr(vc[[1]],"stddev")[2]) # random slope of visit over subject
+  sigmaResiduals <- as.numeric(attr(vc,"sc"))
+  sigmaCorrelation <- as.numeric(attr(vc[[1]],"correlation")[2])
+  
+  # Create an empty dataframe
+  d=expand.grid(Visit=1:visits,Child.ID=1:participants)
+  # Randomly sample from a binomial (to generate the diagnosis)
+  condition <- sample(rep(0:1, participants/2))
+  d$Diagnosis<-condition[d$Child.ID]
+  d$Diagnosis[is.na(d$Diagnosis)]<-1
+  
+  ## Define variance covariance matrices:
+  Sigma.u<-matrix(c(sigmaSubject^2,
+                    sigmaCorrelation*sigmaSubject*sigmaVisit,
+                    sigmaCorrelation*sigmaSubject*sigmaVisit,
+                    sigmaVisit^2),nrow=2)
+  
+  ## generate new fake participants (column1=RandomIntercept, column2=RandomSlope)
+  u<-mvrnorm(n=participants,
+             mu=c(0,0),Sigma=cov(ranef(model)$Child.ID))
+  
+  ## now generate fake data:
+  ### the outcome is extracted from a gaussian with
+  ### the solution to the model's equation as mean and
+  ### the residual standard deviation as standard deviation 
+  d$CHI_MLU <- rnorm(participants*visits,
+                     (Intercept+u[,1]) +
+                     (bVisit+u[,2])*d$Visit + 
+                     bDiagnosis*d$Diagnosis ,sigmaResiduals)  
+  
+  return(d)
+}
+```
+[Report the power analysis and comment on what you can (or cannot) use its estimates for.
+
+Create a table.
+Visit: 29 participants is needed for reaching the power threshold of 80%.(90% = 55.50, 99.75 - 168 rows)
+MOT_MLU: 9 participants  is needed for reaching the power threshold of 80% (90% = 55.50, 99.75 - 50 rows)
+verbalIQ: 22 participants is needed for reaching the power threshold of 80% (100% = 69.15, 100,0 - 127 rows)
+The powercurve is created on 10 simulations which makes it unreliable as more simulations are preferred. Therefore, the powercurve would be more reliable if it had been run on 200 simulations, which also would influence the confidence intervals and decrease the distance between them and thus making the calculations more precise. If more simulations had been run and the power threshold was not reached, a solution would have been to simulate more participants to find the needed number for reaching it.]
+
+### Exercise 3
+
+Assume you have only the resources to collect 30 kids (15 with ASD and 15 TDs). Identify the power for each relevant effect and discuss whether it's worth to run the study and why.
+
+```{r}
+
+ASD_data = subset(data, Diagnosis=="ASD")
+TD_data = subset(data, Diagnosis=="TD")
+
+ASD = subset(ASD_data[1:86,])
+TD = subset(TD_data[1:88,])
+
+new_data = rbind(ASD, TD)
+
+new_model = lmer(CHI_MLU ~ 1 + VISIT + MOT_MLU + verbalIQ + (1+VISIT|CHILD), data = new_data, REML = FALSE)
+summary(new_model)
+
+fixef(new_model)["VISIT"] <- 0.1
+fixef(new_model)["MOT_MLU"] <- 0.3
+fixef(new_model)["verbalIQ"]<- 0.05
+
+new_powerCurveV = powerCurve(new_model, fixed("VISIT"),along="CHILD", nsim=10)
+new_powerCurveM = powerCurve(new_model, fixed("MOT_MLU"),along="CHILD", nsim=10)
+new_powerCurveI = powerCurve(new_model, fixed("verbalIQ"),along="CHILD", nsim=10)
+
+new_powerCurveV
+new_powerCurveM
+new_powerCurveI
+
+```
+
+[ Visit: more than 30 participants is needed for reaching the power threshold of 80%.
+MOT_MLU: 15 participants is needed for reaching the power threshold of 80%.(80% = 44.39, 97.48  - 86 rows)
+verbalIQ: 18 participants is needed for reaching the power threshold of 80%.(90% = 55.50, 99.75 - 103 rows)
+
+Visit does not reach the requirements of the threshold. Therefore more than 30 participant is needed for this model to be powerful enough for research and publication.]
+
